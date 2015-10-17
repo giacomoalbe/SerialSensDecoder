@@ -1,5 +1,5 @@
 ## SerialSensDecoder
-=====================
+=====
 
 ###1. Descrizione
 

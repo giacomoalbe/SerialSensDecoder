@@ -19,6 +19,7 @@ class QHistogram(QWidget):
         # Dati dell'immagine (inizialmente tutti 0)
         self.image = []
         self.setMinimumSize(256, 120)
+        self.setMaximumHeight(120)
 
     def paintEvent(self, event):
 

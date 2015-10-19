@@ -51,7 +51,7 @@ class ImgRect(QWidget):
                             
             qp.end()
 
-	def saveImage(self):
+	def saveImage(self, callback):
 
 		img_array = []
 		img_finale = []
@@ -80,4 +80,7 @@ class ImgRect(QWidget):
 		writer = png.Writer(50*self.num[0], 50*self.num[1])
 		writer.write(fileOut, img_finale)
 		fileOut.close()	
+                
+                # Quando finisce l'esecuzione eseguiamo la funzione di callback
+                callback()
 	

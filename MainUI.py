@@ -10,6 +10,7 @@ import sys
 from ImgGenerator import * 
 from QHistogram import *
 from ImgViewer import *
+from StatusBar import *
 
 
 class MainUI(QtGui.QWidget):
@@ -25,15 +26,23 @@ class MainUI(QtGui.QWidget):
             self.debug = True
 
 	def initUI(self):
+            
+
+            # MESSAGGI STATUSBAR
+            self.messages = {
+                'nofoto' : 'Non e\' presente alcuna foto!',
+                'photo'  : 'Foto scattata!',
+                'saved'  : 'Immagine salvata!'
+            }
 
             # MAIN WIDGET
             self.move(10, 300)
-            self.setFixedSize(680, 540)
+            self.setFixedSize(670, 570)
             self.setWindowTitle("SerialSensDecoder")
 
             # MAIN LAYOUT
             mainLayout = QtGui.QBoxLayout(QtGui.QBoxLayout.TopToBottom, self)
-
+            
             # OTHERS LAYOUT
             comboTopLayout = QtGui.QBoxLayout(QtGui.QBoxLayout.LeftToRight, self)
             bottomLayout = QtGui.QBoxLayout(QtGui.QBoxLayout.TopToBottom, self)
@@ -41,6 +50,7 @@ class MainUI(QtGui.QWidget):
             # WIDGETS
             self.imgViewer = ImgRect(self, 12, 6)
             self.histogram = QHistogram(128)
+            self.statusBar = StatusBar(self.messages['nofoto'])
 
             scattaButton = QtGui.QPushButton('Shoot Image', self)
             saveImgBtn = QtGui.QPushButton('Save Image', self)
@@ -65,6 +75,7 @@ class MainUI(QtGui.QWidget):
 
             bottomLayout.addWidget(self.histogram)
             bottomLayout.addLayout(comboTopLayout)
+            bottomLayout.addWidget(self.statusBar)
             
             mainLayout.addWidget(self.imgViewer)
             mainLayout.addLayout(bottomLayout)
@@ -76,7 +87,7 @@ class MainUI(QtGui.QWidget):
             # EVENTS
 
             scattaButton.clicked.connect(self.generateNewImage)
-            saveImgBtn.clicked.connect(self.imgViewer.saveImage)
+            saveImgBtn.clicked.connect(self.saveImage)
 
 
         def generateNewImage(self):
@@ -92,3 +103,12 @@ class MainUI(QtGui.QWidget):
             self.imgViewer.showImage(image)
             self.histogram.showImage(image)
 
+            self.statusBar.changeMessage(self.messages['photo'])
+    
+        def saveImage(self):
+                
+            self.imgViewer.saveImage(self.changeStatusBar)
+
+        def changeStatusBar(self):
+
+            self.statusBar.changeMessage(self.messages['saved'])

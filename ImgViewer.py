@@ -26,6 +26,8 @@ class ImgRect(QWidget):
         def showImage(self, image):
             # Prendiamo i colori dall'immagine 
             # e facciamo il repaint della stessa
+            if image == None:
+                    return
             self.color = image
             self.repaint()
 

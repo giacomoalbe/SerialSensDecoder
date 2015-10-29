@@ -12,11 +12,14 @@ class ImgRect(QWidget):
 
 		self.setParent(parent)
 		self.num = [x_dim,y_dim]
-		self.lightRange = [40,600]
 
 		# Prendo come base la larghezza della finestra 
 		# e la divido per il numero di campioni orizzontali
-		self.squareDim = self.width() / self.num[0] 
+		self.squareDim = self.width() / self.num[0]
+
+		# Setto l'altezza massima
+		self.setMinimumHeight(self.squareDim * self.num[1])
+		self.setMaximumHeight(self.squareDim * self.num[1])
                 
                 # Init dell'array immagine con valori fissi
                 self.color = [127 for i in range(x_dim*y_dim)]

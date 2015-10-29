@@ -8,6 +8,27 @@ import datetime
 
 class SensDecoder:
 
+    trigIn = (
+        0x40,   # Port
+        0x00,   # Start photo
+        0x01,   # Set the counter from WireIns
+        0x02    # Restore the downAck
+     )
+    # Indirizzo della pipeOut sulla scheda
+    pipeOut = [
+        0xA0,   # Port - Fifo A
+        0xA1    # Port - Fifo B
+    ]
+
+    wireIn = [
+        0x03    # Port
+    ]
+
+    wireOut = [
+        0x20,   # Port - downAck
+        0x21    # Port - fifoCount
+    ]
+    
     def __init__(self):
 
         # Creiamo l'oggetto XEM
@@ -15,37 +36,74 @@ class SensDecoder:
         # Lista dei valori di pixel della foto
         self.photo = []
         # Numero di pixel da recuperare
-        self.pixels = 73 
-        self.trigIn = (
-            0x40,   # Indirizzo del trigger
-            0x00    # Indirizzo del bit da attivare
-        )
-        # Indirizzo della pipeOut sulla scheda
-        self.pipeOut = 0xA0
+        self.pixels = 73
+        self.count = 0
 
         # Apriamo la connessione alla scheda
         if (self.xem.OpenBySerial("") != self.xem.NoError):
             print "ATTENZIONE! Errore nell'aprire la FPGA"
 
         # Inserisco il file .bit nella scheda
-        self.xem.ConfigureFPGA('../sensore.bit')
+        self.xem.ConfigureFPGA('../../sensore.bit')
 
         if self.xem.IsOpen():
             print "Connessione effettuata con la FPGA"
         else:
             print "ATTENZIONE! Errore nell'inserire file .bit!"
             exit
+            
+    def setCounter(self, period):
 
-    def scattaFoto(self, raffica=False):
+        """
+        Set the period of the trigger for taking a photo
+        period is in milliseconds
+        """
+        if (period <= 1200) and (period >= 1):
+            self.xem.SetWireInValue(self.wireIn[0], period)
+            self.xem.UpdateWireIns()
+            self.xem.ActivateTriggerIn(self.trigIn[0], self.trigIn[2])
+            return True
+        return False
 
-        if raffica:
-            # TODO: implementare firmware + software
-            # possibilita' di foto a raffica
-            pass
+    def scattaFoto(self):
 
         # Attiviamo il trigger che da impulso alla scheda
         self.xem.ActivateTriggerIn(self.trigIn[0], self.trigIn[1])
 
+    def getFifoCount(self):
+
+        self.xem.UpdateWireOuts()
+        self.count = self.xem.GetWireOutValue(self.wireOut[1])
+        return self.count
+    
+    def getAllValue(self):
+
+        if self.count > 0:
+
+            # Delete current photo list
+            self.photo = []
+            
+            wordA = '00' * self.count
+            wordB = '00' * self.count
+
+            self.xem.ReadFromPipeOut(self.pipeOut[0], wordA)
+            self.xem.ReadFromPipeOut(self.pipeOut[1], wordB)
+
+            for row in range(1,self.count):
+
+                newValue = ''.join((format(ord(wordA[2*row+1]), '08b'),
+                                   format(ord(wordA[2*row]), '08b'), 
+                                   format(ord(wordB[2*row+1]), '08b'),
+                                   format(ord(wordB[2*row]), '08b')))
+                self.photo.append(int(newValue,2))
+                
+            self.count = 0
+            return self.photo
+        
+
+
+    def getImage(self):
+        
         self.photo = self.getFifoElem()
         print "Foto scattata correttamente!"
 
@@ -57,6 +115,8 @@ class SensDecoder:
         """
         Funzione che ritorna una lista contenente i valori numerici
         contenuti nella FIFO sulla FPGA
+
+        NO MORE USED
         """
 
         rawBitString = '00' * self.pixels
@@ -91,5 +151,6 @@ class SensDecoder:
             for img in self.photos:
                  stringa += "%d \t " % (int(img[riga], 2))
             print "%s\n" % stringa
+
 
         

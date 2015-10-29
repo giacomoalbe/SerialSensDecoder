@@ -10,22 +10,24 @@ class QHistogram(QWidget):
     un range di 256 livelli da nero totale a bianco totale
     """
 
-    def __init__(self, bins):
+    def __init__(self, parent, bins):
 
         super(QHistogram, self).__init__()
         self.binNum = bins
-        self.binWidth = self.width() / float(self.binNum)
-
+        self.setParent(parent)
+        
         # Dati dell'immagine (inizialmente tutti 0)
         self.image = []
-        self.setMinimumSize(256, 120)
+
+        # Imposta altezza a 120
+        self.setMinimumHeight(120)
         self.setMaximumHeight(120)
 
     def paintEvent(self, event):
 
         # Istogramma dei bin
-        istogram = numpy.histogram(self.image, bins = range(self.binNum))[0]
-
+        istogram = numpy.histogram(self.image, bins = range(self.binNum+1))[0]
+        
         # Normalizzo istogramma
         sumHist = float(sum(istogram))
         normHist = [(x/sumHist) for x in istogram]
@@ -38,6 +40,8 @@ class QHistogram(QWidget):
         qp.setBrush(QColor(255,255,255,255))
         qp.drawRect(0,0,self.width(),90)
 
+        self.binWidth = self.width() / float(self.binNum)
+        
         refHeight = 2.0 * max(normHist)
 
         for i in range(len(normHist)):
@@ -51,7 +55,6 @@ class QHistogram(QWidget):
             x = i * (self.binWidth)
             y = 80
 
-
             if numpy.isnan(normHist[i]):
                 height = 0
             else:
@@ -59,7 +62,6 @@ class QHistogram(QWidget):
 
             qp.drawRect(x,y,self.binWidth, height)
             qp.drawRect(x, 100, self.binWidth, -20)
-
         qp.end()
 
     def showImage(self, image):

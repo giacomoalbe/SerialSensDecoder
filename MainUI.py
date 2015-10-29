@@ -32,6 +32,12 @@ class MainUI(QtGui.QWidget):
             # Variabile per il loop del realtime
             self.start = False
 
+            # Variabile per init del sensore
+            self.isSensorReady = True
+
+            # Tempo di apertura del trigger per l'immagine
+            self.currentPeriod = 1200
+
             # Inizializza e collega i vari elementi della UI
             self.initUI()
 
@@ -50,7 +56,7 @@ class MainUI(QtGui.QWidget):
 
             # MAIN WIDGET
             self.move(10, 300)
-            self.setFixedSize(670, 570)
+            self.setFixedSize(670, 600)
             self.setWindowTitle("SerialSensDecoder")
 
             # MAIN LAYOUT
@@ -60,10 +66,12 @@ class MainUI(QtGui.QWidget):
             comboTopLayout = QtGui.QBoxLayout(QtGui.QBoxLayout.LeftToRight, self)
             bottomLayout = QtGui.QBoxLayout(QtGui.QBoxLayout.TopToBottom, self)
             imgInfoLayout = QtGui.QBoxLayout(QtGui.QBoxLayout.LeftToRight, self)
+            lightRangeLayout = QtGui.QBoxLayout(QtGui.QBoxLayout.LeftToRight, self)
+            topInfoLayout = QtGui.QBoxLayout(QtGui.QBoxLayout.TopToBottom, self)
 
             # WIDGETS
             self.imgViewer = ImgRect(self, 12, 6)
-            self.histogram = QHistogram(128)
+            self.histogram = QHistogram(self, 128)
             self.statusBar = StatusBar(self.messages['nofoto'])
 
             self.scattaButton = QtGui.QPushButton('Scatta', self)
@@ -75,9 +83,32 @@ class MainUI(QtGui.QWidget):
             self.minValue = QtGui.QLabel('Min: ')
             self.averageValue = QtGui.QLabel('Average: ')
 
+            # MAX MIN SPIN BOXES
+            self.minRange = QtGui.QSpinBox()
+            self.maxRange = QtGui.QSpinBox()
+
+            minRangeLabel = QtGui.QLabel('Min Threshold')
+            maxRangeLabel = QtGui.QLabel('Max Threshold')
+
+            self.minRange.setMaximum(1000000)
+            self.maxRange.setMaximum(1000)
+
+            self.fpsLabel = QtGui.QLabel('fps: 00')
+            self.fpsLabel.setStyleSheet('color: green')
+
+            self.periodValue = QtGui.QSpinBox()
+            
+
+            lightRangeLayout.addWidget(minRangeLabel)
+            lightRangeLayout.addWidget(self.minRange)   
+            lightRangeLayout.addWidget(maxRangeLabel)
+            lightRangeLayout.addWidget(self.maxRange)
+            
             imgInfoLayout.addWidget(self.maxValue)
             imgInfoLayout.addWidget(self.minValue)
             imgInfoLayout.addWidget(self.averageValue)
+            imgInfoLayout.addWidget(self.fpsLabel)
+            imgInfoLayout.addWidget(self.periodValue)
 
             modeCombo   = QtGui.QComboBox(self)
             lightCombo  = QtGui.QComboBox(self)
@@ -96,7 +127,10 @@ class MainUI(QtGui.QWidget):
             comboTopLayout.addWidget(saveImgBtn)
             comboTopLayout.addWidget(statsImgBtn)
 
-            bottomLayout.addLayout(imgInfoLayout)
+            topInfoLayout.addLayout(imgInfoLayout)
+            topInfoLayout.addLayout(lightRangeLayout)
+            
+            bottomLayout.addLayout(topInfoLayout)
             bottomLayout.addWidget(self.histogram)
             bottomLayout.addLayout(comboTopLayout)
             bottomLayout.addWidget(self.statusBar)
@@ -109,7 +143,9 @@ class MainUI(QtGui.QWidget):
             # Timer per il RT delle foto
             self.timerRt = QTimer()
 
-
+            self.minRange.setValue(1e6)
+            self.maxRange.setValue(1e1)
+            self.rangeChanged()
             self.show()
 
             # EVENTS
@@ -118,10 +154,29 @@ class MainUI(QtGui.QWidget):
             saveImgBtn.clicked.connect(self.saveImage)
             modeCombo.activated[int].connect(self.comboChanged)
 
+            # LIGHT RANGE CHANGES
+            self.minRange.valueChanged.connect(self.rangeChanged)
+            self.maxRange.valueChanged.connect(self.rangeChanged)
+            self.periodValue.valueChanged.connect(self.periodChanged)
+
             # Agganciamo l'evento timeout()
             # all'evento scatta foto
-            self.timerRt.timeout.connect(self.shootSingleImage)
+            self.timerRt.timeout.connect(self.handleShoot)
+            
+    def rangeChanged(self, val=0):
 
+        """
+        Cambiamo i valori di max e min
+        e quindi facciamo il refresh della compressione
+        """
+
+        self.imgGenerator.setLightRange([self.maxRange.value(),
+                                         self.minRange.value()])
+        self.paintImage(self.imgGenerator.updateImage())
+        
+    def periodChanged(self, val):
+
+        print "Period changed to %d" % val
     def generateNewImage(self):
 
             """
@@ -132,18 +187,19 @@ class MainUI(QtGui.QWidget):
             """
 
             if (self.index == 0):
-
-                self.shootSingleImage()
+                
+                self.handleShoot()
                 self.statusBar.changeMessage(self.messages['photo'])
 
             elif (self.index == 1):
-
+                
                 # TODO scatta 1000 foto
                 # Scattiamo 1000 foto e quindi le salviamo
                 # su un file di testo nella cartella, con indicazione temporale
-                self.statusBar.changeMessage(self.messages['shooting'])
-                self.imgGenerator.takeRiflePhoto()
-                self.statusBar.changeMessage(self.messages['rifle_done'])
+                # self.statusBar.changeMessage(self.messages['shooting'])
+                # self.imgGenerator.takeRiflePhoto()
+                # self.statusBar.changeMessage(self.messages['rifle_done'])
+                pass
             else:
                 if self.start == True:
                     # Stoppiamo il realtime sull'ultima foto
@@ -153,23 +209,67 @@ class MainUI(QtGui.QWidget):
                     self.scattaButton.setText('Start')
                     self.statusBar.changeMessage(self.messages['stop'])
                 else:
-                    self.timerRt.start(int(1.0/30.0))
+                    self.timerRt.start((self.currentPeriod + 10) / 1000.0)
                     self.start = True
                     # Cambianmo la label dello scattaButton
                     self.scattaButton.setText('Stop')
                     self.statusBar.changeMessage(self.messages['start'])
 
-    def shootSingleImage(self):
+    def handleShoot(self):
 
-            image = self.imgGenerator.takeImage()
-            self.imgViewer.showImage(image)
-            imageInfo = self.histogram.showImage(image)
+        """
+        NEW MODE:
+        attiva trigger del sensore
+        aspetta periodo + 10
+        scarica il numero di dati presenti
+        gli altri li colora di rosso
+        """
+        imageInfo = self.imgGenerator.takeImage(self.currentPeriod)
+
+        """
+        print imageInfo['imgLen']
+        print len(imageInfo['image'])
+
+        print "=================="
+        print "      Stats       "
+        print "=================="
+        print
+        print "Info"
+        print "------------------"
+        print "Max: %d\nMin: %d\nAvg: %d\n" % (imageInfo['maxVal'],
+                                           imageInfo['minVal'],
+                                           imageInfo['avgVal'])
+        print "------------------"
+        print "Image"
+        print "------------------"
+        stringa = ""
+        for i in range(imageInfo['imgLen']):
+            stringa += "%d\t%d\n" % (i,
+                                     imageInfo['image'][i])
+        print stringa
+        print "------------------"
+        """
+        self.paintImage(imageInfo)
+        
+
+    def paintImage(self, imageInfo):
+
+        if imageInfo is not None:
+            self.imgViewer.showImage(imageInfo['image'])
+            self.histogram.showImage(imageInfo['image'])
 
             # Update Image info
-            self.maxValue.setText('Max: %d' % imageInfo[0])
-            self.minValue.setText('Min: %d' % imageInfo[1])
-            self.averageValue.setText('Average: %d' % imageInfo[2])
-
+            self.setFpsLabel(imageInfo['imgLen'])
+            self.maxValue.setText('Max: %d' % imageInfo['maxVal'])
+            self.minValue.setText('Min: %d' % imageInfo['minVal'])
+            self.averageValue.setText('Average: %d' % imageInfo['avgVal'])
+        
+    def setFpsLabel(self, imgLen):
+        # TODO
+        # Cambiare la label a seconda che la velocita'
+        # permetta o meno di riprendere tutti i pixel
+        pass
+        
     def saveImage(self):
 
             self.imgViewer.saveImage(self.changeStatusBar)

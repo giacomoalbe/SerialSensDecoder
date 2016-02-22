@@ -35,6 +35,10 @@ class ImgGenerator():
         # Init del sensore
         self.initSensore()
 
+    def isReady(self):
+
+        return self.sensore.isOpen()
+
 
     def takeImage(self, period):
 
@@ -60,7 +64,9 @@ class ImgGenerator():
             # Recupero immagine dal sensore
             # Faccio il cambio di scala
             self.imageBase = self.sensore.getAllValue()
+
             return self.updateImage()
+            
 
     def updateImage(self):
 
@@ -73,18 +79,26 @@ class ImgGenerator():
             # Comprimiamo l'immagine in base ai lightRange
             imgNorm = self.compressImage(self.imageBase)
 
+            imageSum = sum(self.imageBase)
+
             # Genero info sull'immagine
             maxVal = max(imgNorm)
             minVal = min(imgNorm)
             avgVal = (sum(imgNorm) / len(imgNorm))
+            maxValRow = max(self.imageBase)
+            minValRow = min(self.imageBase)
+            avgValRow = imageSum / len(self.imageBase)
 
             # Ritorno info sull'immagine
             return {
-                'image'     : imgNorm,
-                'imgLen'    : len(imgNorm),
-                'maxVal'    : maxVal,
-                'minVal'    : minVal,
-                'avgVal'    : avgVal
+                'image'         : imgNorm,
+                'Max'           : maxVal,
+                'Min'           : minVal,
+                'Average'       : avgVal,
+                'rawMax'        : maxValRow,
+                'rawMin'        : minValRow,
+                'rawAverage'    : avgValRow,
+                'time'          : imageSum/100,
             }
 
         return None

@@ -29,9 +29,14 @@ class ImgRect(QWidget):
         def showImage(self, image):
             # Prendiamo i colori dall'immagine 
             # e facciamo il repaint della stessa
-            if image == None:
-                    return
-            self.color = image
+
+            self.error = False
+            
+            if image == None or len(image) < 72:
+                    self.error = True
+            else:
+                    self.color = image
+
             self.repaint()
 
 	def paintEvent(self, event):
@@ -44,8 +49,12 @@ class ImgRect(QWidget):
             # Per ogni riga scrivo le colonne
             for row in range(self.num[1]):
                 for col in range(self.num[0]):
-                    # Genariamo il colore a partire dal valore nel conteggio        
-                    color = QColor(self.color[count], self.color[count], self.color[count])
+                    # Rosso se ci sono problemi
+                    if self.error:
+                            color = QColor(255, 0, 0)
+                    else:
+                            # Genariamo il colore a partire dal valore nel conteggio        
+                            color = QColor(self.color[count], self.color[count], self.color[count])
                     # Coloriamo opportunamente la penna e il pennello
                     qp.setBrush(color)
                     qp.setPen(color)

@@ -4,6 +4,7 @@ except:
     print "Nun se fa niente"
 
 import datetime
+import time
 
 
 class SensDecoder:
@@ -75,6 +76,10 @@ class SensDecoder:
         self.xem.UpdateWireOuts()
         self.count = self.xem.GetWireOutValue(self.wireOut[1])
         return self.count
+
+    def isOpen(self):
+
+        return self.xem.IsOpen()
     
     def getAllValue(self):
 
@@ -152,5 +157,41 @@ class SensDecoder:
                  stringa += "%d \t " % (int(img[riga], 2))
             print "%s\n" % stringa
 
+    def shoot(self, period):
 
-        
+        """
+        Funzione wrapper per scattare la foto,
+        completa di tutto
+        """
+
+        # Set period
+        if self.setCounter(period):
+
+            self.scattaFoto()
+            time.sleep((period + 10) / 1000.0)
+
+            if self.getFifoCount() == 73:
+
+                vals = self.getAllValue()
+                finalString = ""
+                finalString += "Media:\t%f\nMax:\t%f\nMin:\t%f" % (sum(vals) / float(len(vals)), max(vals), min(vals))
+                print finalString
+            else:
+                print "Non sono riuscito a scattare la foto!"
+
+
+    def shootContinue(self, period):
+
+        """
+        Shooting rifle mode
+        at period's frequency
+        """
+
+        while True:
+
+            self.shoot(period)
+            print "*" * 20
+            
+if __name__ == '__main__':
+
+    sens = SensDecoder()

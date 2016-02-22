@@ -1,4 +1,4 @@
-
+ 
 
 from PyQt4 import QtGui
 from PyQt4 import QtCore
@@ -33,10 +33,7 @@ class MainUI(QtGui.QWidget):
             self.start = False
 
             # Variabile per init del sensore
-            self.isSensorReady = True
-
-            # Tempo di apertura del trigger per l'immagine
-            self.currentPeriod = 1200
+            self.isSensorReady = self.imgGenerator.isReady()
 
             # Inizializza e collega i vari elementi della UI
             self.initUI()
@@ -56,18 +53,20 @@ class MainUI(QtGui.QWidget):
 
             # MAIN WIDGET
             self.move(10, 300)
-            self.setFixedSize(670, 600)
+            self.setFixedSize(670, 630)
             self.setWindowTitle("SerialSensDecoder")
 
             # MAIN LAYOUT
             mainLayout = QtGui.QBoxLayout(QtGui.QBoxLayout.TopToBottom, self)
 
             # OTHERS LAYOUT
-            comboTopLayout = QtGui.QBoxLayout(QtGui.QBoxLayout.LeftToRight, self)
-            bottomLayout = QtGui.QBoxLayout(QtGui.QBoxLayout.TopToBottom, self)
-            imgInfoLayout = QtGui.QBoxLayout(QtGui.QBoxLayout.LeftToRight, self)
-            lightRangeLayout = QtGui.QBoxLayout(QtGui.QBoxLayout.LeftToRight, self)
-            topInfoLayout = QtGui.QBoxLayout(QtGui.QBoxLayout.TopToBottom, self)
+
+            ctrlLayout = QtGui.QBoxLayout(QtGui.QBoxLayout.LeftToRight, self)
+            statsLayout = QtGui.QGridLayout(self)
+            settingsLayout = QtGui.QGridLayout(self)
+            buttonsLayout = QtGui.QBoxLayout(QtGui.QBoxLayout.LeftToRight, self)
+            bottomLayout = QtGui.QBoxLayout(QtGui.QBoxLayout.LeftToRight, self)
+
 
             # WIDGETS
             self.imgViewer = ImgRect(self, 12, 6)
@@ -75,67 +74,85 @@ class MainUI(QtGui.QWidget):
             self.statusBar = StatusBar(self.messages['nofoto'])
 
             self.scattaButton = QtGui.QPushButton('Scatta', self)
-            saveImgBtn = QtGui.QPushButton('Salva', self)
-            statsImgBtn = QtGui.QPushButton('Stats', self)
+            self.rtButton = QtGui.QPushButton('Real Time', self)
+            self.saveImgButton = QtGui.QPushButton('Salva', self)
 
-            # INFO LABELS
-            self.maxValue = QtGui.QLabel('Max: ')
-            self.minValue = QtGui.QLabel('Min: ')
-            self.averageValue = QtGui.QLabel('Average: ')
+            buttonsLayout.addWidget(self.scattaButton)
+            buttonsLayout.addWidget(self.rtButton)
+            buttonsLayout.addWidget(self.saveImgButton)
 
-            # MAX MIN SPIN BOXES
-            self.minRange = QtGui.QSpinBox()
-            self.maxRange = QtGui.QSpinBox()
-
-            minRangeLabel = QtGui.QLabel('Min Threshold')
-            maxRangeLabel = QtGui.QLabel('Max Threshold')
-
-            self.minRange.setMaximum(1000000)
-            self.maxRange.setMaximum(1000)
-
-            self.fpsLabel = QtGui.QLabel('fps: 00')
-            self.fpsLabel.setStyleSheet('color: green')
-
-            self.periodValue = QtGui.QSpinBox()
+            if (self.isSensorReady):
+                self.deviceStatus = QtGui.QLabel('Device ready')
+                self.deviceStatus.setStyleSheet('color: green; text-align: right')
+            else:
+                self.deviceStatus = QtGui.QLabel('Device NOT ready')
+                self.deviceStatus.setStyleSheet('color: red; text-align: right')
             
 
-            lightRangeLayout.addWidget(minRangeLabel)
-            lightRangeLayout.addWidget(self.minRange)   
-            lightRangeLayout.addWidget(maxRangeLabel)
-            lightRangeLayout.addWidget(self.maxRange)
+            # STATS LABELS
+
+            statsNames = ['_Stats_Image_Raw Image', 'Max', 'Min', 'Average']
+            self.statsLabel = {}
+
+            for index, name in enumerate(statsNames):
+
+                # Add the info label
+
+                if name.startswith('_'):
+                    # Heading
+                    for headIndex, heading in enumerate(name[1:].split('_')):    
+                        statsLayout.addWidget(QtGui.QLabel(str(heading)), *[index, headIndex])
+                else:
+
+                    # Row name
+                    statsLayout.addWidget(QtGui.QLabel(name))
+                    
+                    self.statsLabel[name] = QtGui.QLabel('0')
+                    self.statsLabel['raw' + name] = QtGui.QLabel('0')
+                    statsLayout.addWidget(self.statsLabel[name], *[index, 1])
+                    statsLayout.addWidget(self.statsLabel['raw' + name], *[index, 2])
+
             
-            imgInfoLayout.addWidget(self.maxValue)
-            imgInfoLayout.addWidget(self.minValue)
-            imgInfoLayout.addWidget(self.averageValue)
-            imgInfoLayout.addWidget(self.fpsLabel)
-            imgInfoLayout.addWidget(self.periodValue)
-
-            modeCombo   = QtGui.QComboBox(self)
-            lightCombo  = QtGui.QComboBox(self)
-            modeCombo.addItem('Single')
-            modeCombo.addItem('Rifle')
-            modeCombo.addItem('Real-time')
-
-            lightCombo.addItem('high')
-            lightCombo.addItem('middle')
-            lightCombo.addItem('low')
-
-            # Imposta i Layout della Immagine
-            comboTopLayout.addWidget(modeCombo)
-            comboTopLayout.addWidget(lightCombo)
-            comboTopLayout.addWidget(self.scattaButton)
-            comboTopLayout.addWidget(saveImgBtn)
-            comboTopLayout.addWidget(statsImgBtn)
-
-            topInfoLayout.addLayout(imgInfoLayout)
-            topInfoLayout.addLayout(lightRangeLayout)
+            self.statsLabel['time'] = QtGui.QLabel('0')
+            self.statsLabel['perc'] = QtGui.QLabel('0')
             
-            bottomLayout.addLayout(topInfoLayout)
-            bottomLayout.addWidget(self.histogram)
-            bottomLayout.addLayout(comboTopLayout)
+            statsLayout.addWidget(QtGui.QLabel('Time'), *[len(statsNames),0])
+            statsLayout.addWidget(self.statsLabel['time'], *[len(statsNames),1])
+            statsLayout.addWidget(self.statsLabel['perc'], *[len(statsNames),2])
+                    
+            # SETTINGS LABELS
+            self.minRange = (QtGui.QSpinBox(),[1,1]) 
+            self.maxRange = (QtGui.QSpinBox(), [2,1])
+            self.periodValue = (QtGui.QSpinBox(), [3,1])
+
+            settingTitleLabel = (QtGui.QLabel('SETTINGS'),[0,0])
+            minRangeLabel = (QtGui.QLabel('Black'), [1,0])
+            maxRangeLabel = (QtGui.QLabel('White'), [2,0])
+            periodLabel = (QtGui.QLabel('Period'), [3,0])
+            self.minRange[0].setMaximum(1000000)
+            self.maxRange[0].setMaximum(1000)
+            self.periodValue[0].setMaximum(1200)
+            self.periodValue[0].setMinimum(1)
+
+            settingsLayout.addWidget(settingTitleLabel[0], *settingTitleLabel[1])
+            settingsLayout.addWidget(minRangeLabel[0], *minRangeLabel[1])
+            settingsLayout.addWidget(maxRangeLabel[0], *maxRangeLabel[1])
+            settingsLayout.addWidget(periodLabel[0], *periodLabel[1])
+            settingsLayout.addWidget(self.minRange[0], *self.minRange[1])
+            settingsLayout.addWidget(self.maxRange[0], *self.maxRange[1])
+            settingsLayout.addWidget(self.periodValue[0], *self.periodValue[1])
+                                    
+
+            ctrlLayout.addLayout(statsLayout)
+            ctrlLayout.addLayout(settingsLayout)
+
             bottomLayout.addWidget(self.statusBar)
+            bottomLayout.addWidget(self.deviceStatus) 
 
             mainLayout.addWidget(self.imgViewer)
+            mainLayout.addWidget(self.histogram)
+            mainLayout.addLayout(ctrlLayout)
+            mainLayout.addLayout(buttonsLayout)
             mainLayout.addLayout(bottomLayout)
 
             self.setLayout(mainLayout)
@@ -143,25 +160,34 @@ class MainUI(QtGui.QWidget):
             # Timer per il RT delle foto
             self.timerRt = QTimer()
 
-            self.minRange.setValue(1e6)
-            self.maxRange.setValue(1e1)
+            self.minRange[0].setValue(5000)
+            self.maxRange[0].setValue(400)
+            self.periodValue[0].setValue(400)
             self.rangeChanged()
             self.show()
 
             # EVENTS
 
-            self.scattaButton.clicked.connect(self.generateNewImage)
-            saveImgBtn.clicked.connect(self.saveImage)
-            modeCombo.activated[int].connect(self.comboChanged)
+            self.scattaButton.clicked.connect(self.shootImage)
+            #saveImgBtn.clicked.connect(self.saveImage)
+            self.rtButton.clicked.connect(self.realTime)
+            #self.saveImgButton.clicked.connect(self.saveImages)
 
             # LIGHT RANGE CHANGES
-            self.minRange.valueChanged.connect(self.rangeChanged)
-            self.maxRange.valueChanged.connect(self.rangeChanged)
-            self.periodValue.valueChanged.connect(self.periodChanged)
+            self.minRange[0].valueChanged.connect(self.rangeChanged)
+            self.maxRange[0].valueChanged.connect(self.rangeChanged)
+            #self.periodValue[0].valueChanged.connect(self.periodChanged)
 
             # Agganciamo l'evento timeout()
             # all'evento scatta foto
-            self.timerRt.timeout.connect(self.handleShoot)
+            self.timerRt.timeout.connect(self.shootImage)
+
+    def shootImage(self):
+
+        if (self.isSensorReady):
+
+            self.paintImage(self.imgGenerator.takeImage(self.periodValue[0].value()))
+            
             
     def rangeChanged(self, val=0):
 
@@ -170,86 +196,25 @@ class MainUI(QtGui.QWidget):
         e quindi facciamo il refresh della compressione
         """
 
-        self.imgGenerator.setLightRange([self.maxRange.value(),
-                                         self.minRange.value()])
+        self.imgGenerator.setLightRange([self.maxRange[0].value(),
+                                         self.minRange[0].value()])
         self.paintImage(self.imgGenerator.updateImage())
-        
-    def periodChanged(self, val):
 
-        print "Period changed to %d" % val
-    def generateNewImage(self):
+    def realTime(self):
 
-            """
-            Funzione che smista le operazioni:
-            1. Se self.index == 0 ==> scatta una immagine
-            2. Se self.index == 1 ==> scatta 1000 immagini e le salva
-            3. se self.index == 2 ==> fa il realtime dalla fotocamera
-            """
-
-            if (self.index == 0):
-                
-                self.handleShoot()
-                self.statusBar.changeMessage(self.messages['photo'])
-
-            elif (self.index == 1):
-                
-                # TODO scatta 1000 foto
-                # Scattiamo 1000 foto e quindi le salviamo
-                # su un file di testo nella cartella, con indicazione temporale
-                # self.statusBar.changeMessage(self.messages['shooting'])
-                # self.imgGenerator.takeRiflePhoto()
-                # self.statusBar.changeMessage(self.messages['rifle_done'])
-                pass
-            else:
-                if self.start == True:
-                    # Stoppiamo il realtime sull'ultima foto
-                    # e rimettiamo il label corretto
-                    self.timerRt.stop()
-                    self.start = False
-                    self.scattaButton.setText('Start')
-                    self.statusBar.changeMessage(self.messages['stop'])
-                else:
-                    self.timerRt.start((self.currentPeriod + 10) / 1000.0)
-                    self.start = True
-                    # Cambianmo la label dello scattaButton
-                    self.scattaButton.setText('Stop')
-                    self.statusBar.changeMessage(self.messages['start'])
-
-    def handleShoot(self):
-
-        """
-        NEW MODE:
-        attiva trigger del sensore
-        aspetta periodo + 10
-        scarica il numero di dati presenti
-        gli altri li colora di rosso
-        """
-        imageInfo = self.imgGenerator.takeImage(self.currentPeriod)
-
-        """
-        print imageInfo['imgLen']
-        print len(imageInfo['image'])
-
-        print "=================="
-        print "      Stats       "
-        print "=================="
-        print
-        print "Info"
-        print "------------------"
-        print "Max: %d\nMin: %d\nAvg: %d\n" % (imageInfo['maxVal'],
-                                           imageInfo['minVal'],
-                                           imageInfo['avgVal'])
-        print "------------------"
-        print "Image"
-        print "------------------"
-        stringa = ""
-        for i in range(imageInfo['imgLen']):
-            stringa += "%d\t%d\n" % (i,
-                                     imageInfo['image'][i])
-        print stringa
-        print "------------------"
-        """
-        self.paintImage(imageInfo)
+        if self.start == True:
+            # Stoppiamo il realtime sull'ultima foto
+            # e rimettiamo il label corretto
+            self.timerRt.stop()
+            self.start = False
+            self.rtButton.setText('Start')
+            self.statusBar.changeMessage(self.messages['stop'])
+        else:
+            self.timerRt.start((self.periodValue[0].value() + 10) / 1000.0)
+            self.start = True
+            # Cambianmo la label dello scattaButton
+            self.rtButton.setText('Stop')
+            self.statusBar.changeMessage(self.messages['start'])
         
 
     def paintImage(self, imageInfo):
@@ -258,17 +223,16 @@ class MainUI(QtGui.QWidget):
             self.imgViewer.showImage(imageInfo['image'])
             self.histogram.showImage(imageInfo['image'])
 
-            # Update Image info
-            self.setFpsLabel(imageInfo['imgLen'])
-            self.maxValue.setText('Max: %d' % imageInfo['maxVal'])
-            self.minValue.setText('Min: %d' % imageInfo['minVal'])
-            self.averageValue.setText('Average: %d' % imageInfo['avgVal'])
-        
-    def setFpsLabel(self, imgLen):
-        # TODO
-        # Cambiare la label a seconda che la velocita'
-        # permetta o meno di riprendere tutti i pixel
-        pass
+            perc = imageInfo['time'] / float(self.periodValue[0].value()*1000)
+
+            # Update Image Stats
+            for field in ['Max', 'Min', 'Average']:
+                self.statsLabel[field].setText("%d" % (imageInfo[field]))
+                self.statsLabel['raw' + field].setText("%d" % (imageInfo['raw' + field]))
+                
+            self.statsLabel['time'].setText("{0:d} us".format(imageInfo['time']))
+            self.statsLabel['perc'].setText("{0:.2%}".format(perc))
+
         
     def saveImage(self):
 
@@ -277,15 +241,4 @@ class MainUI(QtGui.QWidget):
     def changeStatusBar(self):
 
             self.statusBar.changeMessage(self.messages['saved'])
-
-    def comboChanged(self, index):
-
-            # Update del index del combo
-            self.index = index;
-
-            if (index == 2):
-                # Modifichiamo il label di scattaButton
-                self.scattaButton.setText('Start')
-            else:
-                self.scattaButton.setText('Scatta')
 

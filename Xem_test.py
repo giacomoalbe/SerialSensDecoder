@@ -109,7 +109,7 @@ class Xem:
             
             return {
                 'image'     : self.values,
-                'imgLen'    : self.count
+                'imgLen'    : self.count,
                 'maxVal'    : maxVal,
                 'minVal'    : minVal,
                 'avgVal'    : avgVal
@@ -129,8 +129,11 @@ def main():
 
     xem = Xem()
     xem.shootPhoto(1200)
+    print image
 
+"""
 if __name__ == '__main__':
-    main()
-    
+    #main()
+
+"""
     

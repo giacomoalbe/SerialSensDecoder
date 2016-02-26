@@ -75,7 +75,7 @@ class ImgGenerator():
         i dati per l'immagine e quindi di passarli
         alla MainUI
         """
-        if len(self.imageBase) != 0:
+        if self.imageBase and len(self.imageBase) != 0:
             # Comprimiamo l'immagine in base ai lightRange
             imgNorm = self.compressImage(self.imageBase)
 
@@ -92,6 +92,7 @@ class ImgGenerator():
             # Ritorno info sull'immagine
             return {
                 'image'         : imgNorm,
+                'rawImage'      : self.imageBase,
                 'Max'           : maxVal,
                 'Min'           : minVal,
                 'Average'       : avgVal,

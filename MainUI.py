@@ -31,6 +31,10 @@ class MainUI(QtGui.QWidget):
             self.index = 0
             # Variabile per il loop del realtime
             self.start = False
+            self.saveStart = False
+
+            # Container for saved images' average
+            self.avgSaved = []
 
             # Variabile per init del sensore
             self.isSensorReady = self.imgGenerator.isReady()
@@ -48,6 +52,7 @@ class MainUI(QtGui.QWidget):
                 'shooting'      : 'Sto scattando foto...',
                 'rifle_done'    : 'Raffica conclusa!',
                 'start'         : 'Registrazione Iniziata',
+                'not-active'    :  'ERRORE! Il sensore non e\' alimentato!',
                 'stop'          : 'Registrazione Stoppata'
             }
 
@@ -66,6 +71,7 @@ class MainUI(QtGui.QWidget):
             settingsLayout = QtGui.QGridLayout(self)
             buttonsLayout = QtGui.QBoxLayout(QtGui.QBoxLayout.LeftToRight, self)
             bottomLayout = QtGui.QBoxLayout(QtGui.QBoxLayout.LeftToRight, self)
+            saveLayout = QtGui.QBoxLayout(QtGui.QBoxLayout.LeftToRight, self)
 
 
             # WIDGETS
@@ -79,7 +85,6 @@ class MainUI(QtGui.QWidget):
 
             buttonsLayout.addWidget(self.scattaButton)
             buttonsLayout.addWidget(self.rtButton)
-            buttonsLayout.addWidget(self.saveImgButton)
 
             if (self.isSensorReady):
                 self.deviceStatus = QtGui.QLabel('Device ready')
@@ -87,6 +92,9 @@ class MainUI(QtGui.QWidget):
             else:
                 self.deviceStatus = QtGui.QLabel('Device NOT ready')
                 self.deviceStatus.setStyleSheet('color: red; text-align: right')
+                
+            self.progressLabel = QtGui.QLabel('Saved Frames 0/0')
+            self.savedImageAvg = QtGui.QLabel('Avg: 0')
             
 
             # STATS LABELS
@@ -141,24 +149,44 @@ class MainUI(QtGui.QWidget):
             settingsLayout.addWidget(self.minRange[0], *self.minRange[1])
             settingsLayout.addWidget(self.maxRange[0], *self.maxRange[1])
             settingsLayout.addWidget(self.periodValue[0], *self.periodValue[1])
-                                    
+
+            # SAVE CTRL
+
+            self.imageNumber = QtGui.QSpinBox()
+            self.filename = QtGui.QLineEdit()
+
+            self.filename.setMaximumWidth(200)
+            self.imageNumber.setMaximum(2000)
+            self.imageNumber.setMinimum(1)
+            
+            saveLayout.addWidget(QtGui.QLabel('FileName'))
+            saveLayout.addWidget(self.filename)
+            saveLayout.addWidget(QtGui.QLabel('Frames'))
+            saveLayout.addWidget(self.imageNumber)
+            saveLayout.addWidget(self.saveImgButton)
 
             ctrlLayout.addLayout(statsLayout)
             ctrlLayout.addLayout(settingsLayout)
 
             bottomLayout.addWidget(self.statusBar)
-            bottomLayout.addWidget(self.deviceStatus) 
+            bottomLayout.addWidget(self.deviceStatus)
+            bottomLayout.addWidget(self.progressLabel)
+            bottomLayout.addWidget(self.savedImageAvg)
+            
 
             mainLayout.addWidget(self.imgViewer)
             mainLayout.addWidget(self.histogram)
             mainLayout.addLayout(ctrlLayout)
             mainLayout.addLayout(buttonsLayout)
+            mainLayout.addLayout(saveLayout)
             mainLayout.addLayout(bottomLayout)
 
             self.setLayout(mainLayout)
 
             # Timer per il RT delle foto
             self.timerRt = QTimer()
+            # Timer per il save
+            self.timerSave = QTimer()
 
             self.minRange[0].setValue(5000)
             self.maxRange[0].setValue(400)
@@ -171,16 +199,16 @@ class MainUI(QtGui.QWidget):
             self.scattaButton.clicked.connect(self.shootImage)
             #saveImgBtn.clicked.connect(self.saveImage)
             self.rtButton.clicked.connect(self.realTime)
-            #self.saveImgButton.clicked.connect(self.saveImages)
+            self.saveImgButton.clicked.connect(self.saveImage)
 
             # LIGHT RANGE CHANGES
             self.minRange[0].valueChanged.connect(self.rangeChanged)
             self.maxRange[0].valueChanged.connect(self.rangeChanged)
-            #self.periodValue[0].valueChanged.connect(self.periodChanged)
 
             # Agganciamo l'evento timeout()
             # all'evento scatta foto
             self.timerRt.timeout.connect(self.shootImage)
+            self.timerSave.timeout.connect(self.handleSaveImage)
 
     def shootImage(self):
 
@@ -233,11 +261,69 @@ class MainUI(QtGui.QWidget):
             self.statsLabel['time'].setText("{0:d} us".format(imageInfo['time']))
             self.statsLabel['perc'].setText("{0:.2%}".format(perc))
 
+            self.statusBar.changeMessage(self.messages['photo'])
+            
+        else:
+
+            # The FPGA is online but the sensor is not active
+            self.statusBar.changeMessage(self.messages['not-active'])
+
         
     def saveImage(self):
 
-            self.imgViewer.saveImage(self.changeStatusBar)
+            self.text = self.filename.text()
+            self.frames = self.imageNumber.value()
 
+            self.saveMode = True
+            
+            if (self.text):
+                self.saveMode = False
+
+            if (self.frames and not self.saveStart):
+                
+                self.count = 0
+                self.savedImageAvg.setText('Avg: 0')
+                self.saveStart = True
+                self.timerSave.start((self.periodValue[0].value() + 10) / 1000.0)
+
+    def handleSaveImage(self):
+
+        if self.count == self.frames:
+            self.timerSave.stop()
+            self.saveStart = False
+
+            if self.saveMode:
+                self.savedImageAvg.setText('Avg: %d' % (sum(self.avgSaved) / len(self.avgSaved),))
+            self.avgSaved = []
+            self.progressLabel.setText('Saved Frames 0/0')
+            self.filename.clear()
+        else:
+            self.count += 1
+
+            # Save Avg mode
+            if self.saveMode:
+                self.avgSaved.append(self.imgGenerator.takeImage(self.periodValue[0].value())['rawAverage'])
+            else:
+                self.writeToFile(self.imgGenerator.takeImage(self.periodValue[0].value())['rawImage'])
+            self.progressLabel.setText('Saved Frames %d/%d' % (self.count, self.frames))
+
+    def writeToFile(self, image):
+
+            outFile = open('../logs/' + self.text +'.dat', 'a')
+
+            imgLength = len(image)
+
+            for index, pix in enumerate(image):
+
+                ending = ','
+                
+                if index == (imgLength-1):
+                    ending = '\n'
+                    
+                outFile.write(str(pix) + ending)
+                
+            self.progressLabel.setText('Written Frames %d/%d' % (self.count, self.frames))
+            
     def changeStatusBar(self):
 
             self.statusBar.changeMessage(self.messages['saved'])

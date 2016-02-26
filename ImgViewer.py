@@ -13,6 +13,8 @@ class ImgRect(QWidget):
 		self.setParent(parent)
 		self.num = [x_dim,y_dim]
 
+		self.error = False
+
 		# Prendo come base la larghezza della finestra 
 		# e la divido per il numero di campioni orizzontali
 		self.squareDim = self.width() / self.num[0]

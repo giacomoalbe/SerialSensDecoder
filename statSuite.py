@@ -71,7 +71,7 @@ def outputString(hist):
     Creates the string to be written to a file
     """
 
-    outputStr = "Index\tAverage\tScarto\t"
+    outputStr = "Index\tAverage\tScarto\n"
 
     for index in hist:
 

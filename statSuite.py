@@ -71,7 +71,7 @@ def outputString(hist):
     Creates the string to be written to a file
     """
 
-    outputStr = ""
+    outputStr = "Index\tAverage\tScarto\t"
 
     for index in hist:
 
@@ -139,7 +139,7 @@ def timeAvg():
 
 
                 #printPhotoScarto(pixelHist)
-                fileOut = open(resFolder + 'time_res_%d%d.csv' % (a,b), 'w')
+                fileOut = open(resFolder + 'time_res_%d%d.tsv' % (a,b), 'w')
                 fileOut.write(outputString(pixelHist))
                 fileOut.close()
                 print "File: %d%d written!" % (a,b)

@@ -309,7 +309,7 @@ class MainUI(QtGui.QWidget):
 
     def writeToFile(self, image):
 
-            outFile = open('../logs/' + self.text +'.dat', 'a')
+            outFile = open('logs/' + self.text +'.dat', 'a')
 
             imgLength = len(image)
 

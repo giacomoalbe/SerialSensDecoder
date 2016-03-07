@@ -22,13 +22,12 @@ def main():
     """
 
     args = sys.argv[1:]
-    print args
 
     if len(args) >= 2: 
         # Set the suffix
         suffix = '_' + args[1] 
 
-    print suffix
+    print "Suffix is %s" % (suffix,)
 
     if len(args) > 0: 
         if int(args[0][0]) == 2:
@@ -96,7 +95,7 @@ def spatialAvg(suffix):
 
     outString = ""
 
-    for firstNumb in range(2,6):
+    for firstNumb in range(1,6):
         for secondNumb in range(1,7):
 
             try:
@@ -118,6 +117,7 @@ def spatialAvg(suffix):
                 pass
 
     writeFile = open(resFolder + 'avgs%s.csv' % (suffix,), 'w')
+    print "Written file %savgs%s.csv" % (resFolder, suffix)
     writeFile.write(outString)
     writeFile.close()
 

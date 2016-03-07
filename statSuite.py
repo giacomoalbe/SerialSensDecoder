@@ -12,6 +12,7 @@ get the result I need
 
 # Set the folder in whitch to store the results
 resFolder = "res/"
+suffix = ""
 
 def main():
 
@@ -20,11 +21,20 @@ def main():
     operations this script can do
     """
 
-    if sys.argv[1:]:
-        if int(sys.argv[1:][0]) == 2:
-            timeAvg()
+    args = sys.argv[1:]
+    print args
+
+    if len(args) >= 2: 
+        # Set the suffix
+        suffix = '_' + args[1] 
+
+    print suffix
+
+    if len(args) > 0: 
+        if int(args[0][0]) == 2:
+            timeAvg(suffix)
         else:
-            spatialAvg()
+            spatialAvg(suffix)
 
 
 
@@ -82,7 +92,7 @@ def outputString(hist):
 
 # 1. Average of Spacial Average of all Logs
 
-def spatialAvg():
+def spatialAvg(suffix):
 
     outString = ""
 
@@ -91,7 +101,7 @@ def spatialAvg():
 
             try:
 
-                logsFile = open('logs/%d%d.dat' % (firstNumb, secondNumb))
+                logsFile = open('logs/%d%d%s.dat' % (firstNumb, secondNumb, suffix))
 
                 # Read the file's row (every is a photo)
                 logs = logsFile.read().split("\n")[:-1]
@@ -103,11 +113,11 @@ def spatialAvg():
 
                 outString += "%d\n" %  (mainAvg)
 
-                print "Processing file: %d%d" % (firstNumb, secondNumb)
+                print "Processing file: %d%d%s" % (firstNumb, secondNumb, suffix)
             except: 
                 pass
 
-    writeFile = open(resFolder + 'avgs.csv', 'w')
+    writeFile = open(resFolder + 'avgs%s.csv' % (suffix,), 'w')
     writeFile.write(outString)
     writeFile.close()
 
@@ -115,14 +125,17 @@ def spatialAvg():
 
 # Use only 22
 
-def timeAvg():
+def timeAvg(suffix):
+
+    # Set the suffix for decoding the correct 
+    # series of logs
 
     for a in range(2,6):
         for b in range(1,7):
 
             try: 
 
-                readFile = open('logs/%d%d.dat' % (a,b), 'r')
+                readFile = open('logs/%d%d%s.dat' % (a,b, suffix), 'r')
                 images = readFile.read().split("\n")[:-1]
 
                 pixelHist = {}
@@ -139,10 +152,10 @@ def timeAvg():
 
 
                 #printPhotoScarto(pixelHist)
-                fileOut = open(resFolder + 'time_res_%d%d.tsv' % (a,b), 'w')
+                fileOut = open(resFolder + 'time_res_%d%d%s.tsv' % (a,b,suffix), 'w')
                 fileOut.write(outputString(pixelHist))
                 fileOut.close()
-                print "File: %d%d written!" % (a,b)
+                print "File: %d%d%s written!" % (a,b,suffix)
 
             except:
                 pass

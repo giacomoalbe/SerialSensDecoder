@@ -33,10 +33,19 @@ for name in namespaces:
 outString = ''
 fwrite = open('%s/out.csv' % (prefolder,) , 'w')
 filecontent = ""
+first = ""
 
 for index, avg in enumerate(avgs):
 
-    filecontent += str(avg).replace('.', ',') + '\n'
+    if index == 0:
+
+        first = avg
+
+    print avg / first
+
+    filecontent += str(avg / first).replace('.', ',') + '\n'
+
+print filecontent
 
 fwrite.write(filecontent)
 fwrite.close()

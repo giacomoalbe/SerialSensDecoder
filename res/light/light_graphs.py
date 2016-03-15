@@ -47,15 +47,19 @@ for elem in asset_obj:
         perc = abs(val / first - error_templates[error_key]) / (val/first) *100
         errors[elem][index] = perc
 
+        print asset_obj[elem][index]
+
+        """
         print "%d: %f - %f = %f" % (error_key,
                                     asset_obj[elem][index],
                                     error_templates[error_key],
                                     errors[elem][index])
+        """
         
 
 # Plot the results
 
-colors = ['r','g','b','y','m']
+colors = ['#3498db','#1abc9c','#2ecc71','#f1c40f','#e67e22']
 
 fig, ax = plt.subplots()
 
@@ -80,17 +84,19 @@ def setbarvalue(rects):
 
     for rect in rects:
 
-        height = 1.05 * rect.get_height()
+        height = 1* rect.get_height() + 0.5 
         width = rect.get_x() + rect.get_width()/2
-        text = "{0:.01f}".format(height)
+        text = "{0:.01f}%".format(height)
 
         ax.text(width, height, text, ha='center', va='bottom')
 
 
     
 
-width = 0.18
+width = 0.20
 x = np.arange(5)
+legend_labels = []
+legend_items = []
 
 for i in range(5):
 
@@ -102,8 +108,14 @@ for i in range(5):
     # Set the axis' value
     setbarvalue(rects)
 
-ax.set_title('Scarto Percentuale tra valori Reali e Ideali')
-ax.set_ylabel('Trasmittanza Reale - Ideale (%)')
+    # Set the legend item & label
+    legend_items.append(rects)
+    legend_labels.append('Lente %f' % error_templates[i])
+
+ax.legend(legend_items, legend_labels)
+ax.set_title('Scarto Percentuale tra valori Reali e Ideali', fontsize=25)
+ax.set_ylabel('Trasmittanza Reale - Ideale (%)', fontsize=18)
+ax.set_xlabel('Filtri Ruota Scura', fontsize=18)
 ax.set_xticks(x + 0.18*2.5)
 ax.set_xticklabels(["Lente {0:.04f}".format(1/10.0**i) for i in range(0,5)])
 ax.set_yticks(range(0,51,5))

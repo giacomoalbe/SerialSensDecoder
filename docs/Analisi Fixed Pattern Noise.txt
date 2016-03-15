@@ -1,0 +1,50 @@
+Analisi Del Fixed Patter Noise
+==============================
+
+Servono due analisi distinte:
+
+* La prima e' sul fixed pattern noise. Si calcola la media delle medie spaziali
+  di tutte le 1000 immagini ad un certo valore di intensita' luminosa. 
+  Quindi si calcola la media temporale su ogni pixel e si calcola il FPN come 
+  scarto quadratico medio tra le medie temporali di ogni singolo pixel e la media 
+  spaziale complessiva. 
+  Questo valore e' un numero (quindi adimensionale) per ogni intensita' 
+  luminosa e andra' messo in tabella
+
+* La seconda e' sulla distribuzione dei singoli valori di uno stesso pixel 
+  rispetto alla media temporale di esso. Qui e' da vedere se fare un grafico di 
+  famiglie di curve o se e' interessante vedere l'andamento a una luce di riferimento
+  bassa alta e media e valutare un istogramma con l'andamento del pixel.
+  
+Analisi dell'Harvesting
+=======================
+
+Abbiamo i dati con sensore acceso e spento della corrente che e' presente 
+sul ramo del diodo fotosensibile. 
+
+Qui semplicemente dobbiamo graficarli in base alla corrente in ingresso al sensore
+(quindi la luce che proviene dalla sorgente) per valutare l'andamento della 
+corrente fotogenerata in base alla luce in input, sia a sensore acceso che spento.
+
+Todo Complessivo Finale della Tesi
+==================================
+
+* Riscrivere valutazione della caratteristica, partendo da luce ideale, quindi 
+  reale bassa, quindi estrapolata alta, mischiata alta bassa e infine tutta alta
+  mostrando che il criterio di scelta e' stato quello della miglior regressione
+  lineare che ci porta a dire che il sensore ha una comportamento lineare
+  indipendente dalla tensione.
+* Mostrare andamento del rumore spaziale fisso (usare solo 20 e 28, mostrando entrambi)
+* Capire come mostrare andamento rumore temporale
+* Mostrare i risultati del harvesting
+* Mostrare i consumi (capire come funziona test di Nicola)
+* Controllare tutte le foto (inserire il circuitino nell'immagine della spiegazione
+  della luce che arriva al sensore, corregger FSM, inserire foto scheda madre + sensore) 
+* Ringraziamenti
+* Credits
+* Presentazione (capire quali siano i punti importanti dell'elaborato)
+* Stampa della versione bella (Mesiano o Piazza Venezia)
+* Pagamento Bollettino
+* Controllare quando escono le commissioni
+* Mandare elaborato a Passerone
+* Riordinare scrivania FBK riportare tutto al suo posto. 

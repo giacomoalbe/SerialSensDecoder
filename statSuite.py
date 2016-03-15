@@ -1,6 +1,7 @@
 #! *_* coding: UTF-8 *_*
 
 import sys
+from matplotlib import pyplot as plt
 
 """
 
@@ -29,9 +30,12 @@ def main():
 
     print "Suffix is %s" % (suffix,)
 
-    if len(args) > 0: 
+    if len(args) > 0:
+
         if int(args[0][0]) == 2:
-            timeAvg(suffix)
+
+            timeSpaceAvg(suffix)
+         
         else:
             spatialAvg(suffix)
 
@@ -46,9 +50,10 @@ def avg(items):
 
     return sum(items) / float(len(items))
 
-def scartoTipo(items):
+def scartoTipo(items, mean = None):
 
-    mean = avg(items)
+    if not mean:
+        mean = avg(items)
 
     return (sum([(item - mean)**2 for item in items]) / float(len(items)))**0.5
 
@@ -91,74 +96,92 @@ def outputString(hist):
 
 # 1. Average of Spacial Average of all Logs
 
-def spatialAvg(suffix):
+def spatialAvg(suffix, filename):
 
-    outString = ""
+    try:
 
-    for firstNumb in range(1,6):
-        for secondNumb in range(1,7):
+        logsFile = open('logs/%s%s.dat' % (filename, suffix))
 
-            try:
+        # Read the file's row (every is a photo)
+        logs = logsFile.read().split("\n")[:-1]
+        logsFile.close()
 
-                logsFile = open('logs/%d%d%s.dat' % (firstNumb, secondNumb, suffix))
+        mainAvgs = [avg(a.split(",")) for a in logs]
 
-                # Read the file's row (every is a photo)
-                logs = logsFile.read().split("\n")[:-1]
-                logsFile.close()
+        mainAvg = sum(mainAvgs) / float(len(mainAvgs))
 
-                mainAvgs = [avg(a.split(",")) for a in logs]
+        return mainAvg
 
-                mainAvg = sum(mainAvgs) / float(len(mainAvgs))
-
-                outString += "%d\n" %  (mainAvg)
-
-                print "Processing file: %d%d%s" % (firstNumb, secondNumb, suffix)
-            except: 
-                pass
-
-    writeFile = open(resFolder + 'avgs%s.csv' % (suffix,), 'w')
-    print "Written file %savgs%s.csv" % (resFolder, suffix)
-    writeFile.write(outString)
-    writeFile.close()
+    except:
+        
+        pass
+        return None
 
 # 2. Time Average
 
 # Use only 22
 
-def timeAvg(suffix):
+def timeAvg(suffix, filename):
 
     # Set the suffix for decoding the correct 
     # series of logs
+    try: 
 
-    for a in range(2,6):
-        for b in range(1,7):
+        readFile = open('logs/%s%s.dat' % (filename, suffix), 'r')
+        images = readFile.read().split("\n")[:-1]
 
-            try: 
+        pixelHist = {}
 
-                readFile = open('logs/%d%d%s.dat' % (a,b, suffix), 'r')
-                images = readFile.read().split("\n")[:-1]
+        for image in images:
+            for index, pixel in enumerate(image.split(",")):
 
-                pixelHist = {}
+                pixel = int(pixel)
 
-                for image in images:
-                    for index, pixel in enumerate(image.split(",")):
-
-                        pixel = int(pixel)
-
-                        if pixelHist.get(index):
-                            pixelHist.get(index).append(pixel) 
-                        else:
-                            pixelHist[index] = [pixel]
+                if pixelHist.get(index):
+                    pixelHist.get(index).append(pixel) 
+                else:
+                    pixelHist[index] = [pixel]
 
 
-                #printPhotoScarto(pixelHist)
-                fileOut = open(resFolder + 'time_res_%d%d%s.tsv' % (a,b,suffix), 'w')
-                fileOut.write(outputString(pixelHist))
-                fileOut.close()
-                print "File: %d%d%s written!" % (a,b,suffix)
+        #printPhotoScarto(pixelHist)
+        #fileOut = open(resFolder + 'time_res_%d%d%s.tsv' % (a,b,suffix), 'w')
+        #fileOut.write(outputString(pixelHist))
+        #fileOut.close()
+        #print "File: %d%d%s written!" % (a,b,suffix)
 
-            except:
-                pass
+    except:
+        pass
+
+    return pixelHist
+
+def timeSpaceAvg(suffix):
+
+    namespaces = ["%d%d" % (a,b) for a in range(1,6) for b in range(1,7)]
+    outString = ""
+    y = []
+
+    for filename in namespaces:
+
+        pixelHist = timeAvg(suffix, filename)
+        spatial = spatialAvg(suffix, filename)
+
+        pixelAvg = [avg(pixelHist[key]) for key in pixelHist]
+
+        scarto = scartoTipo(pixelAvg, spatial)
+        y.append(scarto)
+
+        outString += "{0},{1:.03f}\n".format(filename, scarto)
+
+        print "Processing {0}...".format(filename)
+
+    fileOutName = "{0}spatial{1}.csv".format(resFolder, suffix)
+    fileOut = open(fileOutName, 'w')
+    fileOut.write(outString)
+    fileOut.close()
+
+    print "Written file: {0}".format(fileOutName)
+    plt.plot([int(name) for name in namespaces],y)
+    plt.show()
 
 if __name__ == '__main__':
 

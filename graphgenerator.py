@@ -71,7 +71,7 @@ def plotCarateristic(res_obj):
     fitfunc = lambda p, x: p[0] + p[1] * x   
     errfunc = lambda p, x, y, err: (y - fitfunc(p, x)) / err
 
-    lightsarr= ['light-ideal', 'light-mixed', 'light-low', 'light-estrapolated']
+    lightsarr= ['light-ideal', 'light-mixed', 'light-low', 'light-high']
     row = 0
     col = 0
 
@@ -83,7 +83,8 @@ def plotCarateristic(res_obj):
         legend_items = []
         legend_labels = []
         std_labels = []
-
+        x_a = []
+        
         for i in range(3):
 
 
@@ -110,6 +111,7 @@ def plotCarateristic(res_obj):
             std_labels.append(r"out-{0}: std = {1:.05f}".format(i+1, std_err))
             print "%s: out-%d = %f" % (light,i,std_err) 
 
+        print [10**(i/10.0) for i in range(-20, 25)]
         axarr[row][col].axis([-2, 2.5, -5, 1.5])
         axarr[row][col].grid()
         legend1 = axarr[row][col].legend(legend_items, std_labels, loc=2)
